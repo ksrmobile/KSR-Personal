@@ -879,6 +879,39 @@
             background: none;
             color: var(--g-1);
         }
+        /* Mobile performance: keep the same look, reduce expensive compositing/blur/animations */
+        @media (max-width: 768px), (hover: none) {
+            /* Large fixed blurred layers are costly on mobile GPUs */
+            body::before {
+                animation: none !important;
+                /* Keep the glow but reduce the heavy blur/saturation */
+                filter: blur(18px) saturate(125%) !important;
+                opacity: 0.92 !important;
+            }
+            body::after {
+                /* This conic layer is the most expensive; remove it on mobile */
+                display: none !important;
+            }
+            .bg-accents {
+                animation: none !important;
+                filter: blur(18px) saturate(125%) !important;
+                opacity: 0.9 !important;
+            }
+
+            /* Glass blur is expensive; slightly reduce on mobile while keeping glass effect */
+            .ios-card {
+                backdrop-filter: blur(16px) saturate(155%) !important;
+                -webkit-backdrop-filter: blur(16px) saturate(155%) !important;
+            }
+
+            /* Avoid extra paint work from hover-only transitions on touch devices */
+            .tech-item:hover,
+            .gradient-btn:hover,
+            .frame-card:hover {
+                transform: none !important;
+            }
+        }
+
     </style>
 </head>
     <body class="min-h-screen relative selection:bg-green-500/30 selection:text-white">
@@ -938,7 +971,7 @@
                     </div>
                     <div class="lg:w-1/2 flex justify-center fade-in-section">
                         <div class="profile-container floating-element">
-                            <div class="hero-banner" aria-hidden="false"><span class="badge-dot" aria-hidden="true"></span><span>My habit : Watch Play Chat Coding</span></div>
+                            <div class="hero-banner" aria-hidden="false"><span class="badge-dot" aria-hidden="true"></span><span>My habit : Watch Play Chat</span></div>
                             <img src="images/me.jpg" alt="KSR" class="profile-img" loading="lazy" decoding="async" width="280" height="280" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                             <div class="hidden w-full h-full absolute top-0 left-0 items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 rounded-full">
                                 <div class="text-center">
@@ -1209,6 +1242,9 @@
 
             // Smart auto-flip: randomized intervals, avoid flipping during fade, pause on hover
             (function setupSmartAutoFlip() {
+                // Disable auto-flip on mobile/touch to reduce jank (tap-to-reveal still works)
+                if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) return;
+
                 const cards = Array.from(document.querySelectorAll('.frame-card'));
                 if (!cards.length) return;
 
@@ -1314,6 +1350,9 @@
 
             // Click ripple effect: subtle ring on interactive elements
             document.addEventListener('click', (e) => {
+                // Skip ripple on small touch screens to reduce DOM churn
+                if (window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse) and (max-width: 768px)').matches) return;
+
                 try {
                     const target = e.target;
                     const clickable = target.closest && target.closest('a, button, .gradient-btn, .frame-card');
