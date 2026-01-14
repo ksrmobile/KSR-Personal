@@ -1242,15 +1242,18 @@
 
             // Smart auto-flip: randomized intervals, avoid flipping during fade, pause on hover
             (function setupSmartAutoFlip() {
-                // Disable auto-flip on mobile/touch to reduce jank (tap-to-reveal still works)
-                if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) return;
+                const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                if (prefersReducedMotion) return;
+
+                // Mobile/touch: keep auto-fade, but run less frequently and align flips to the render loop
+                const isTouch = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 
                 const cards = Array.from(document.querySelectorAll('.frame-card'));
                 if (!cards.length) return;
 
                 const fadeMs = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--frame-fade')) || 1800;
-                const minInterval = 4200;
-                const maxInterval = 9000;
+                const minInterval = isTouch ? 6500 : 4200;
+                const maxInterval = isTouch ? 12000 : 9000;
                 const rand = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
 
                 cards.forEach((card, idx) => {
@@ -1264,7 +1267,9 @@
                                 return;
                             }
                             card.dataset.animating = '1';
-                            card.classList.toggle('flipped');
+                            requestAnimationFrame(() => {
+                                card.classList.toggle('flipped');
+                            });
                             setTimeout(() => {
                                 card.dataset.animating = '0';
                                 scheduleNext();
